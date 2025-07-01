@@ -1,20 +1,76 @@
-<!-- my-tools-site/index.html -->
+<!-- tools/todo-app/index.html -->
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mijn Tools</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Todo App with Calendar</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0079bf">
 </head>
 <body>
-  <h1>Tools</h1>
-  <ul>
-    <li><a href="tools/office-days.html">Kantoordagen Generator</a></li>
-    <li><a href="tools/spreadsheet.html">Mini Spreadsheet</a></li>
-    <li><a href="tools/dilution-calculator.html">Dilutions</a></li>
-    <li><a href="tools/regex-tester.html">Regex</a></li>
-    <li><a href="tools/pdf-util.html">PDF util</a></li>
-    <li><a href="tools/todo-app/index.html">Todo Calendar</a></li>
-  </ul>
+  <div id="main-container">
+    <!-- Top: lists -->
+    <div id="board-container">
+      <div id="controls">
+        <button id="add-list-btn">Add List</button>
+        <button id="export-btn">Export JSON</button>
+        <button id="import-btn">Import JSON</button>
+        <input type="file" id="import-json" accept=".json" style="display:none">
+        <input type="text" id="filter-input" placeholder="Filter tags…">
+      </div>
+      <div id="board" class="board"></div>
+    </div>
+    <!-- Bottom: calendar -->
+    <div id="calendar-container">
+      <h3>Weekly Schedule</h3>
+      <div id="calendar"></div>
+    </div>
+  </div>
+
+  <!-- Card Modal -->
+  <div id="card-modal" class="modal hidden">
+    <div class="modal-content">
+      <span id="modal-close" class="close">&times;</span>
+      <h2 id="modal-title"></h2>
+
+      <div id="segment-container">
+        <label>Work 1 (min):</label>
+        <input type="number" id="seg-work1" min="0">
+        <label>Wait (min):</label>
+        <input type="number" id="seg-wait" min="0">
+        <label>Work 2 (min):</label>
+        <input type="number" id="seg-work2" min="0">
+      </div>
+
+      <div id="color-container">
+        <label for="color-input">Color:</label>
+        <input type="color" id="color-input">
+      </div>
+
+      <div id="tags-container">
+        <label for="tags-input">Tags:</label>
+        <input type="text" id="tags-input" placeholder="tag1, tag2">
+      </div>
+
+      <div id="checklist-container">
+        <h3>Checklist</h3>
+        <ul id="checklist"></ul>
+        <input type="text" id="check-item-input" placeholder="New checklist item…">
+        <button id="add-check-item-btn">Add Item</button>
+      </div>
+
+      <button id="delete-card-btn" class="delete-card-btn">Delete Card</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="app.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 </body>
 </html>
