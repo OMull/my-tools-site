@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dilution Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f7f7f7;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    #result {
+      margin-top: 20px;
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Dilution Calculator</h2>
+
+<label>Current Concentration:</label>
+<input type="number" id="c1" step="any">
+<select id="unit1">
+  <option value="M">M</option>
+  <option value="mM">mM</option>
+  <option value="uM">µM</option>
+  <option value="nM">nM</option>
+  <option value="X">X</option>
+  <option value="g/L">g/L</option>
+  <option value="mg/mL">mg/mL</option>
+  <option value="ug/mL">µg/mL</option>
+  <option value="ng/mL">ng/mL</option>
+</select>
+
+<label>Desired Final Volume:</label>
+<input type="number" id="v2" step="any">
+<select id="volUnit">
+  <option value="L">L</option>
+  <option value="mL">mL</option>
+  <option value="uL">µL</option>
+</select>
+
+<label>Desired Final Concentration:</label>
+<input type="number" id="c2" step="any">
+<select id="unit2">
+  <option value="M">M</option>
+  <option value="mM">mM</option>
+  <option value="uM">µM</option>
+  <option value="nM">nM</option>
+  <option value="X">X</option>
+  <option value="g/L">g/L</option>
+  <option value="mg/mL">mg/mL</option>
+  <option value="ug/mL">µg/mL</option>
+  <option value="ng/mL">ng/mL</option>
+</select>
+
+<button onclick="calculateDilution()">Calculate</button>
+
+<div id="result"></div>
+
+<script>
+function convertToBaseConcentration(value, unit) {
+  const map = {
+    "M": 1,
+    "mM": 1e-3,
+    "uM": 1e-6,
+    "nM": 1e-9,
+    "X": 1, // relative
+    "g/L": 1,
+    "mg/mL": 1,
+    "ug/mL": 1e-3,
+    "ng/mL": 1e-6
+  };
+  return value * (map[unit] || 1);
+}
+
+function convertToLiters(value, unit) {
+  const map = {
+    "L": 1,
+    "mL": 1e-3,
+    "uL": 1e-6
+  };
+  return value * (map[unit] || 1);
+}
+
+function calculateDilution() {
+  const c1 = parseFloat(document.getElementById("c1").value);
+  const unit1 = document.getElementById("unit1").value;
+  const v2 = parseFloat(document.getElementById("v2").value);
+  const volUnit = document.getElementById("volUnit").value;
+  const c2 = parseFloat(document.getElementById("c2").value);
+  const unit2 = document.getElementById("unit2").value;
+
+  if (isNaN(c1) || isNaN(c2) || isNaN(v2)) {
+    document.getElementById("result").innerText = "Please enter valid numeric values.";
+    return;
+  }
+
+  const c1_base = convertToBaseConcentration(c1, unit1);
+  const c2_base = convertToBaseConcentration(c2, unit2);
+  const v2_L = convertToLiters(v2, volUnit);
+
+  if (c2_base > c1_base) {
+    document.getElementById("result").innerText = "Error: Final concentration cannot be higher than starting concentration.";
+    return;
+  }
+
+  const v1_L = (c2_base * v2_L) / c1_base;
+  const diluent_L = v2_L - v1_L;
+
+  document.getElementById("result").innerText =
+    `Add ${(v1_L * 1000).toFixed(2)} mL of stock solution\n` +
+    `Add ${(diluent_L * 1000).toFixed(2)} mL of diluent\n` +
+    `To reach ${c2} ${unit2} in ${v2} ${volUnit}`;
+}
+</script>
+
+</body>
+</html>

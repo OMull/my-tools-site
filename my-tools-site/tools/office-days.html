@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Kantoordagen Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f4f4f4;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 120px;
+      resize: vertical;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Kantoordagen Generator</h2>
+
+  <label for="year">Jaar:</label>
+  <input type="number" id="year" value="2025">
+
+  <label for="month">Maand (1–12):</label>
+  <input type="number" id="month" value="6">
+
+  <label for="excluded">Dagen NIET op kantoor (bijv. 2,6,12-15):</label>
+  <input type="text" id="excluded">
+
+  <button onclick="generateOfficeDays()">Genereer</button>
+
+  <div id="output" class="output" contenteditable="true"></div>
+
+  <script>
+    function parseExcludedDays(input) {
+      const result = new Set();
+      const tokens = input.split(",");
+      for (let token of tokens) {
+        token = token.trim();
+        if (token.includes("-")) {
+          const [start, end] = token.split("-").map(Number);
+          for (let i = start; i <= end; i++) {
+            result.add(i);
+          }
+        } else if (token !== "") {
+          result.add(Number(token));
+        }
+      }
+      return [...result];
+    }
+
+    function groupConsecutiveDays(days) {
+      days.sort((a, b) => a - b);
+      const groups = [];
+      let temp = [days[0]];
+      for (let i = 1; i < days.length; i++) {
+        if (days[i] === days[i - 1] + 1) {
+          temp.push(days[i]);
+        } else {
+          groups.push(temp);
+          temp = [days[i]];
+        }
+      }
+      if (temp.length) groups.push(temp);
+      return groups;
+    }
+
+    function generateOfficeDays() {
+      const year = parseInt(document.getElementById('year').value);
+      const month = parseInt(document.getElementById('month').value);
+      const excludedInput = document.getElementById('excluded').value;
+      const excludedDays = parseExcludedDays(excludedInput);
+
+      const dutchMonths = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
+                           'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
+      const monthName = dutchMonths[month - 1];
+
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const weekdays = [];
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const weekday = new Date(year, month - 1, day).getDay(); // 0=Sun, 6=Sat
+        if (weekday !== 0 && weekday !== 6) {
+          weekdays.push(day);
+        }
+      }
+
+      const workedDays = weekdays.filter(day => !excludedDays.includes(day));
+      const groups = groupConsecutiveDays(workedDays);
+
+      const formatted = groups.map(g => {
+        return g.length === 1 ? `${g[0]} ${monthName}` : `${g[0]}-${g[g.length - 1]} ${monthName}`;
+      });
+
+      const outputText = `Dagen op kantoor:\n${formatted.join(",\n")}\n\nTotaal aantal dagen: ${workedDays.length}`;
+
+      document.getElementById('output').textContent = outputText;
+    }
+  </script>
+
+</body>
+</html>
