@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Heart Development Timeline Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 1000px; margin: 40px auto; padding: 20px; }
+    #controls { margin-bottom: 20px; }
+    #controls label { margin-right: 15px; }
+    #timeline { width: 100%; height: 600px; }
+  </style>
+</head>
+<body>
+<h2>Heart Development Timeline Viewer</h2>
+
+<div id="controls">
+  <label>Species:
+    <select id="species" onchange="updateTimeline()">
+      <option value="Mouse">Mouse (E-day)</option>
+      <option value="Zebrafish">Zebrafish (hpf)</option>
+      <option value="Xenopus">Xenopus (hpf)</option>
+      <option value="Chicken">Chicken (HH stage)</option>
+      <option value="Human">Human (Weeks)</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="catTrab" checked onchange="updateTimeline()"> Trabeculation</label>
+  <label><input type="checkbox" id="catComp" checked onchange="updateTimeline()"> Compaction</label>
+  <label><input type="checkbox" id="catVCS" checked onchange="updateTimeline()"> VCS</label>
+</div>
+
+<div id="timeline"></div>
+
+<script>
+// Combined event data for multiple species
+const events = [
+  // Mouse (E-day)
+  { name: 'Trabecular Emergence', start: 9.0, end: 12.0, type: 'Trabeculation', species: 'Mouse' },
+  { name: 'Compact Myocardium Maturation', start: 11.5, end: 14.5, type: 'Compaction', species: 'Mouse' },
+  { name: 'VCS Emergence', start: 10.5, end: 12.5, type: 'VCS', species: 'Mouse' },
+  // Zebrafish (hpf)
+  { name: 'Trabeculation Onset', start: 24, end: 48, type: 'Trabeculation', species: 'Zebrafish' },
+  { name: 'Compact-like Layer Formation', start: 60, end: 72, type: 'Compaction', species: 'Zebrafish' },
+  { name: 'VCS Analog Development', start: 36, end: 60, type: 'VCS', species: 'Zebrafish' },
+  // Xenopus (hpf)
+  { name: 'Trabeculation', start: 72, end: 120, type: 'Trabeculation', species: 'Xenopus' },
+  { name: 'Compaction', start: 120, end: 168, type: 'Compaction', species: 'Xenopus' },
+  { name: 'VCS Formation', start: 96, end: 144, type: 'VCS', species: 'Xenopus' },
+  // Chicken (HH stage)
+  { name: 'Trabeculation HH17-24', start: 17, end: 24, type: 'Trabeculation', species: 'Chicken' },
+  { name: 'Compaction HH27-35', start: 27, end: 35, type: 'Compaction', species: 'Chicken' },
+  { name: 'VCS Remodeling HH24-30', start: 24, end: 30, type: 'VCS', species: 'Chicken' },
+  // Human (Weeks)
+  { name: 'Trabeculation', start: 5, end: 8, type: 'Trabeculation', species: 'Human' },
+  { name: 'Compaction', start: 10, end: 20, type: 'Compaction', species: 'Human' },
+  { name: 'VCS Development', start: 8, end: 12, type: 'VCS', species: 'Human' }
+];
+
+// Axis configuration per species
+const axisConfig = {
+  'Mouse':     { title: 'Embryonic Day (E)',     tick0: 7,   dtick: 1 },
+  'Zebrafish': { title: 'Hours Post-Fertilization (hpf)', tick0: 0, dtick: 24 },
+  'Xenopus':   { title: 'Hours Post-Fertilization (hpf)', tick0: 0, dtick: 48 },
+  'Chicken':   { title: 'Hamburger-Hamilton Stage',        tick0: 10,  dtick: 5 },
+  'Human':     { title: 'Weeks Post-Fertilization',        tick0: 3,   dtick: 1 }
+};
+
+function updateTimeline() {
+  const species = document.getElementById('species').value;
+  const showTrab = document.getElementById('catTrab').checked;
+  const showComp = document.getElementById('catComp').checked;
+  const showVCS  = document.getElementById('catVCS').checked;
+
+  // Filter by species and category
+  const filtered = events.filter(e => e.species === species && (
+    (e.type === 'Trabeculation' && showTrab) ||
+    (e.type === 'Compaction'    && showComp) ||
+    (e.type === 'VCS'           && showVCS)
+  ));
+
+  // Build traces
+  const traces = filtered.map(e => ({
+    x: [e.start, e.end],
+    y: [e.name, e.name],
+    mode: 'lines',
+    line: { width: 20,
+      color: e.type === 'Trabeculation' ? '#1f77b4'
+            : e.type === 'Compaction'    ? '#2ca02c'
+            : '#d62728' },
+    name: e.name,
+    hoverinfo: 'name+x',
+    showlegend: false
+  }));
+
+  // Calculate axis range
+  const starts = filtered.map(e => e.start);
+  const ends   = filtered.map(e => e.end);
+  const minX = Math.min(...starts) - (Math.max(...starts)*0.05);
+  const maxX = Math.max(...ends)   + (Math.max(...ends)*0.05);
+
+  const cfg = axisConfig[species];
+  const layout = {
+    title: `${species} Heart Development: Trabeculation, Compaction, VCS`,
+    xaxis: { title: cfg.title, tick0: cfg.tick0, dtick: cfg.dtick, range: [minX, maxX] },
+    yaxis: { automargin: true },
+    height: 600
+  };
+
+  Plotly.newPlot('timeline', traces, layout, {responsive: true});
+}
+
+// Initial render
+updateTimeline();
+</script>
+</body>
+</html>
