@@ -52,6 +52,7 @@
   <option value="mg/mL">mg/mL</option>
   <option value="ug/mL">µg/mL</option>
   <option value="ng/mL">ng/mL</option>
+  <option value="ng/uL">ng/µL</option>
 </select>
 
 <label>Desired Final Volume:</label>
@@ -74,6 +75,7 @@
   <option value="mg/mL">mg/mL</option>
   <option value="ug/mL">µg/mL</option>
   <option value="ng/mL">ng/mL</option>
+  <option value="ng/uL">ng/µL</option>
 </select>
 
 <button onclick="calculateDilution()">Calculate</button>
@@ -91,7 +93,8 @@ function convertToBaseConcentration(value, unit) {
     "g/L": 1,
     "mg/mL": 1,
     "ug/mL": 1e-3,
-    "ng/mL": 1e-6
+    "ng/mL": 1e-6,
+    "ng/uL": 1e-3
   };
   return value * (map[unit] || 1);
 }
