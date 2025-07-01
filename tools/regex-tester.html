@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Regex Tester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f4f4f4;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      font-family: monospace;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    label {
+      margin-top: 15px;
+      display: block;
+      font-weight: bold;
+    }
+    #output {
+      white-space: pre-wrap;
+      background: white;
+      padding: 10px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .highlight {
+      background-color: yellow;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Regex Tester</h2>
+
+<label for="pattern">Regex Pattern:</label>
+<input type="text" id="pattern" placeholder="e.g. \b\w+@\w+\.\w+\b">
+
+<label for="flags">Flags (e.g. g, i, m):</label>
+<input type="text" id="flags" placeholder="e.g. gi">
+
+<label for="text">Input Text:</label>
+<textarea id="text" rows="10" placeholder="Type or paste text here..."></textarea>
+
+<button onclick="runRegex()">Test Regex</button>
+
+<div id="output"></div>
+
+<script>
+function runRegex() {
+  const pattern = document.getElementById('pattern').value;
+  const flags = document.getElementById('flags').value;
+  const text = document.getElementById('text').value;
+  let output = document.getElementById('output');
+
+  try {
+    const regex = new RegExp(pattern, flags);
+    let lastIndex = 0;
+    let match;
+    let result = '';
+
+    while ((match = regex.exec(text)) !== null) {
+      const before = text.slice(lastIndex, match.index);
+      const matched = match[0];
+      result += before + '<span class="highlight">' + matched + '</span>';
+      lastIndex = match.index + matched.length;
+
+      if (!regex.global) break; // avoid infinite loop without /g
+    }
+    result += text.slice(lastIndex);
+    output.innerHTML = result || '<em>No matches found.</em>';
+  } catch (err) {
+    output.innerHTML = `<span style="color:red;">Error: ${err.message}</span>`;
+  }
+}
+</script>
+
+</body>
+</html>
