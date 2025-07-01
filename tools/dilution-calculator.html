@@ -87,7 +87,7 @@ function convertToBaseConcentration(value, unit) {
     "mM": 1e-3,
     "uM": 1e-6,
     "nM": 1e-9,
-    "X": 1, // relative
+    "X": 1,
     "g/L": 1,
     "mg/mL": 1,
     "ug/mL": 1e-3,
@@ -103,6 +103,15 @@ function convertToLiters(value, unit) {
     "uL": 1e-6
   };
   return value * (map[unit] || 1);
+}
+
+function getVolumeUnitFactor(unit) {
+  const map = {
+    "L": 1,
+    "mL": 1e3,
+    "uL": 1e6
+  };
+  return map[unit] || 1;
 }
 
 function calculateDilution() {
@@ -129,10 +138,12 @@ function calculateDilution() {
 
   const v1_L = (c2_base * v2_L) / c1_base;
   const diluent_L = v2_L - v1_L;
+  const factor = getVolumeUnitFactor(volUnit);
+  const unitLabel = volUnit;
 
   document.getElementById("result").innerText =
-    `Add ${(v1_L * 1000).toFixed(2)} mL of stock solution\n` +
-    `Add ${(diluent_L * 1000).toFixed(2)} mL of diluent\n` +
+    `Add ${(v1_L * factor).toFixed(2)} ${unitLabel} of stock solution\n` +
+    `Add ${(diluent_L * factor).toFixed(2)} ${unitLabel} of diluent\n` +
     `To reach ${c2} ${unit2} in ${v2} ${volUnit}`;
 }
 </script>
