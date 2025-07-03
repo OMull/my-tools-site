@@ -28,7 +28,7 @@
     return '_' + Math.random().toString(36).substr(2,9);
   }
 
-  // — Export/Import —
+  // — Export / Import —
   function exportData() {
     const blob = new Blob([JSON.stringify(boardData,null,2)],{type:'application/json'});
     const url  = URL.createObjectURL(blob);
@@ -43,7 +43,7 @@
     r.onload = () => {
       try {
         const imp = JSON.parse(r.result);
-        if (imp.lists) {
+        if (imp.lists && Array.isArray(imp.lists)) {
           boardData = imp; saveState();
           render(); renderCalendar();
         } else alert('Invalid JSON');
@@ -53,7 +53,7 @@
     e.target.value = '';
   }
 
-  // — Filtering helpers —
+  // — Filter helpers —
   function getFilterTags() {
     return document.getElementById('filter-input').value
       .split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
@@ -63,11 +63,9 @@
     return card.tags.some(t=> filters.includes(t.toLowerCase()));
   }
 
-  // — List/Card ops —
+  // — List & Card ops —
   function addList() {
-    if (boardData.lists.length >= MAX_LISTS){
-      alert('Max lists reached'); return;
-    }
+    if (boardData.lists.length >= MAX_LISTS){ alert('Max lists'); return; }
     const t = prompt('List title:'); if (!t) return;
     boardData.lists.push({ id:uuid(), title:t, cards:[] });
     saveState(); render(); renderCalendar();
@@ -101,19 +99,18 @@
     saveState(); render(); renderCalendar();
   }
   function updateCardOrder() {
-    document.querySelectorAll('.list').forEach(le=>{
-      const list = boardData.lists.find(l=>l.id===le.dataset.id);
-      list.cards = Array.from(le.querySelectorAll('.card')).map(ce=>
-        list.cards.find(c=>c.id===ce.dataset.id)
-      );
+    document.querySelectorAll('.cards').forEach(container=>{
+      const listId = container.closest('.list').dataset.id;
+      const list = boardData.lists.find(l=>l.id===listId);
+      list.cards = Array.from(container.children)
+        .map(ce=> list.cards.find(c=>c.id===ce.dataset.id));
     });
     saveState(); renderCalendar();
   }
   function updateListOrder() {
     const boardEl = document.getElementById('board');
-    boardData.lists = Array.from(boardEl.querySelectorAll('.list')).map(le=>
-      boardData.lists.find(l=>l.id===le.dataset.id)
-    );
+    boardData.lists = Array.from(boardEl.children)
+      .map(le=> boardData.lists.find(l=>l.id===le.dataset.id));
     saveState(); renderCalendar();
   }
 
@@ -125,26 +122,29 @@
 
     boardData.lists.forEach(list=>{
       const listEl = document.createElement('div');
-      listEl.className = 'list'; listEl.dataset.id = list.id;
+      listEl.className = 'list';
+      listEl.dataset.id = list.id;
 
-      // header
+      // header (drag handle for list)
       const hd = document.createElement('div');
       hd.className = 'list-header';
-      const ttl = document.createElement('span'); ttl.textContent = list.title;
-      const delL = document.createElement('button'); delL.textContent='×';
-      delL.onclick = ()=>deleteList(list.id);
-      hd.append(ttl,delL); listEl.append(hd);
+      hd.textContent = list.title;
+      const delL = document.createElement('button');
+      delL.textContent='×'; delL.onclick=()=>deleteList(list.id);
+      hd.append(delL);
+      listEl.append(hd);
 
       // cards
       const cardsEl = document.createElement('div');
       cardsEl.className = 'cards';
 
       list.cards.forEach(card=>{
-        if (!matchesFilter(card, filters)) return;
+        if (!matchesFilter(card,filters)) return;
 
         const ce = document.createElement('div');
-        ce.className = 'card'; ce.dataset.id = card.id;
-        ce.draggable = true;
+        ce.className = 'card';
+        ce.dataset.id = card.id;
+        // Sortable uses mousedown, not native drag. No ce.draggable
         ce.style.borderLeftColor = card.color;
         if(card.completed) ce.classList.add('completed');
         if(card.scheduled.length){
@@ -153,44 +153,40 @@
           ce.append(dot);
         }
 
-        // dragstart payload
-        ce.addEventListener('dragstart', e => {
-          const d = JSON.stringify({listId:list.id,cardId:card.id});
-          e.dataTransfer.setData('application/json', d);
-          e.dataTransfer.setData('text/plain', d);
-        });
-
-        // reorder handle
-        const handle = document.createElement('span');
-        handle.className='drag-handle'; handle.textContent='≡';
-        ce.append(handle);
-
         // checkbox
         const chk = document.createElement('input');
         chk.type='checkbox'; chk.checked=card.completed;
         chk.onchange=e=>toggleCardCompleted(list.id,card.id,e.target.checked);
+        ce.append(chk);
 
         // title
         const sp = document.createElement('span');
         sp.className='title'; sp.textContent=card.title;
+        ce.append(sp);
 
         // duration
         const du = document.createElement('span');
         du.className='duration'; du.textContent=card.duration+'m';
+        ce.append(du);
 
-        // calendar button
+        // calendar‐drag handle
         const sb = document.createElement('button');
         sb.textContent='📅'; sb.title='Schedule';
-        sb.onclick = e => {
+        sb.draggable = true;
+        sb.onclick = e=>{
           e.stopPropagation();
-          document.querySelectorAll('.card.selected')
-            .forEach(x=>x.classList.remove('selected'));
           ce.classList.add('selected');
           activeCard = { listId:list.id, cardId:card.id };
         };
+        sb.addEventListener('dragstart', e=>{
+          const payload = JSON.stringify({ listId:list.id, cardId:card.id });
+          e.dataTransfer.setData('application/json', payload);
+          e.dataTransfer.setData('text/plain', payload);
+        });
+        ce.append(sb);
 
-        ce.append(chk,sp,du,sb);
-        ce.addEventListener('click', e=>{
+        // open modal
+        ce.addEventListener('click',e=>{
           if(e.target===chk||e.target===sb) return;
           openCardModal(list.id,card.id);
         });
@@ -198,18 +194,19 @@
         cardsEl.append(ce);
       });
 
+      // make cards sortable (between lists)
       new Sortable(cardsEl,{
-        group:'board', animation:150,
-        handle:'.drag-handle', onEnd:updateCardOrder
+        group:'board', animation:150, onEnd:updateCardOrder
       });
 
+      // add‐card button
       const addB = document.createElement('button');
       addB.textContent='+'; addB.onclick=()=>addCard(list.id);
       listEl.append(cardsEl,addB);
       boardEl.append(listEl);
     });
 
-    // make lists draggable
+    // make lists sortable (by header)
     new Sortable(boardEl,{
       animation:150, handle:'.list-header', onEnd:updateListOrder
     });
@@ -222,15 +219,15 @@
     cal.style.display='grid';
     cal.style.gridTemplateColumns = `60px repeat(${DAYS.length},1fr)`;
 
-    // times
-    const times = [];
+    // time slots
+    const times=[];
     for(let t=SLOT_START;t<=SLOT_END;t+=SLOT_INT){
       const h=Math.floor(t/60),m=t%60;
       times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
     }
     cal.style.gridTemplateRows=`auto repeat(${times.length},1fr)`;
 
-    // header row
+    // header
     cal.appendChild(document.createElement('div'));
     DAYS.forEach(d=>{
       const hd=document.createElement('div');
@@ -238,7 +235,7 @@
       cal.append(hd);
     });
 
-    // labels + cells
+    // labels & drop targets
     times.forEach((ts,rowIdx)=>{
       const lbl=document.createElement('div');
       lbl.className='cell time-label';
@@ -248,38 +245,46 @@
       DAYS.forEach((_,dayIdx)=>{
         const cell=document.createElement('div');
         cell.className='cell calendar-cell';
-        cell.dataset.day=dayIdx;
-        cell.dataset.time=ts;
+        cell.dataset.day=dayIdx; cell.dataset.time=ts;
 
-        // enable drop
+        // allow drop
         cell.addEventListener('dragover',e=>e.preventDefault());
         cell.addEventListener('drop',e=>{
           e.preventDefault();
           let raw=e.dataTransfer.getData('application/json');
           if(!raw) raw=e.dataTransfer.getData('text/plain');
           try {
-            const {listId,cardId}=JSON.parse(raw);
-            const c=boardData.lists.find(l=>l.id===listId)
-                                   .cards.find(x=>x.id===cardId);
-            if(!c.scheduled.some(s=>s.day===dayIdx&&s.time===ts)){
-              c.scheduled.push({day:dayIdx,time:ts});
-              saveState(); render(); renderCalendar();
+            const { listId, cardId }=JSON.parse(raw);
+            const card = boardData.lists
+              .find(l=>l.id===listId)
+              .cards.find(c=>c.id===cardId);
+            // reposition if already scheduled, else add
+            const idx = card.scheduled.findIndex(s=>s.day===dayIdx);
+            if(idx>=0){
+              card.scheduled[idx]={day:dayIdx,time:ts};
+            } else {
+              card.scheduled.push({day:dayIdx,time:ts});
             }
+            saveState(); render(); renderCalendar();
           } catch{}
         });
 
-        // also allow click scheduling
+        // click scheduling still works
         cell.addEventListener('click',()=>{
           if(!activeCard) return;
           const {listId,cardId}=activeCard;
-          const c=boardData.lists.find(l=>l.id===listId)
-                                 .cards.find(x=>x.id===cardId);
-          if(!c.scheduled.some(s=>s.day===dayIdx&&s.time===ts)){
-            c.scheduled.push({day:dayIdx,time:ts});
-            saveState(); render(); renderCalendar();
+          const card = boardData.lists
+            .find(l=>l.id===listId)
+            .cards.find(c=>c.id===cardId);
+          const exists = card.scheduled.find(s=>s.day===dayIdx);
+          if(exists){
+            exists.time=ts;
+          } else {
+            card.scheduled.push({day:dayIdx,time:ts});
           }
+          saveState(); render(); renderCalendar();
           document.querySelectorAll('.card.selected')
-            .forEach(x=>x.classList.remove('selected'));
+            .forEach(x=> x.classList.remove('selected'));
           activeCard=null;
         });
 
@@ -287,21 +292,21 @@
       });
     });
 
-    // measure
+    // measurements
     const rect=cal.getBoundingClientRect();
     const headerH=cal.querySelector('.day-header').offsetHeight;
     const firstColW=cal.querySelector('.time-label').offsetWidth;
     const slotH=(rect.height-headerH)/times.length;
     const colW=(rect.width-firstColW)/DAYS.length;
 
-    // place events
-    const filters = getFilterTags();
+    // render events (work/wait)
+    const filters=getFilterTags();
     boardData.lists.forEach(list=>
       list.cards.forEach(card=>{
         if(!matchesFilter(card,filters)) return;
         card.scheduled.forEach(s=>{
-          const di=s.day, si=times.indexOf(s.time);
-          if(si<0) return;
+          const dayIdx=s.day, slotIdx=times.indexOf(s.time);
+          if(slotIdx<0) return;
           let off=0;
           card.segments.forEach(seg=>{
             const span=Math.ceil(seg.length/SLOT_INT);
@@ -315,8 +320,8 @@
               ev.classList.add('wait-pattern');
             }
             ev.style.position='absolute';
-            ev.style.left=`${firstColW+di*colW}px`;
-            ev.style.top=`${headerH+(si+off)*slotH}px`;
+            ev.style.left=`${firstColW+dayIdx*colW}px`;
+            ev.style.top=`${headerH+(slotIdx+off)*slotH}px`;
             ev.style.width=`${colW}px`;
             ev.style.height=`${span*slotH}px`;
             ev.style.pointerEvents='none';
@@ -330,7 +335,8 @@
 
   // — Modal & checklist & segments & tags —
   function openCardModal(listId,cardId){
-    const c=boardData.lists.find(l=>l.id===listId).cards.find(x=>x.id===cardId);
+    const c=boardData.lists.find(l=>l.id===listId).cards
+      .find(x=>x.id===cardId);
     activeCard={listId,cardId};
     document.getElementById('modal-title').textContent=c.title;
     document.getElementById('seg-work1').value=c.segments[0].length;
@@ -362,32 +368,32 @@
     const inp=document.getElementById('check-item-input'),txt=inp.value.trim();
     if(!txt||!activeCard) return;
     const c=boardData.lists.find(l=>l.id===activeCard.listId).cards
-                 .find(x=>x.id===activeCard.cardId);
+      .find(x=>x.id===activeCard.cardId);
     c.checklist.push({id:uuid(),text:txt,checked:false});
     inp.value=''; saveState(); renderChecklist(c.checklist);
   }
   function toggleChecklistItem(id){
     const c=boardData.lists.find(l=>l.id===activeCard.listId).cards
-                 .find(x=>x.id===activeCard.cardId);
+      .find(x=>x.id===activeCard.cardId);
     const it=c.checklist.find(x=>x.id===id); it.checked=!it.checked;
     saveState(); renderChecklist(c.checklist);
   }
   function removeChecklistItem(id){
     const c=boardData.lists.find(l=>l.id===activeCard.listId).cards
-                 .find(x=>x.id===activeCard.cardId);
+      .find(x=>x.id===activeCard.cardId);
     c.checklist=c.checklist.filter(x=>x.id!==id);
     saveState(); renderChecklist(c.checklist);
   }
   function updateSegments(){
     if(!activeCard) return;
     const c=boardData.lists.find(l=>l.id===activeCard.listId).cards
-                 .find(x=>x.id===activeCard.cardId);
+      .find(x=>x.id===activeCard.cardId);
     const w1=+document.getElementById('seg-work1').value||0;
     const wt=+document.getElementById('seg-wait').value||0;
     const w2=+document.getElementById('seg-work2').value||0;
-    c.segments = (wt>0&&w2>0)
-      ? [{type:'work',length:w1},{type:'wait',length:wt},{type:'work',length:w2}]
-      : [{type:'work',length:w1}];
+    c.segments=(wt>0&&w2>0)
+      ?[{type:'work',length:w1},{type:'wait',length:wt},{type:'work',length:w2}]
+      :[{type:'work',length:w1}];
     c.duration=c.segments.reduce((s,n)=>s+n.length,0);
     saveState(); render(); renderCalendar();
   }
@@ -398,19 +404,17 @@
   document.getElementById('tags-input').onchange=()=>{
     if(!activeCard) return;
     const c=boardData.lists.find(l=>l.id===activeCard.listId).cards
-                 .find(x=>x.id===activeCard.cardId);
+      .find(x=>x.id===activeCard.cardId);
     c.tags=document.getElementById('tags-input').value
       .split(',').map(s=>s.trim()).filter(Boolean);
     saveState(); render(); renderCalendar();
   };
-
   document.getElementById('color-input').onchange=function(){
     if(!activeCard) return;
     const c=boardData.lists.find(l=>l.id===activeCard.listId).cards
-                 .find(x=>x.id===activeCard.cardId);
+      .find(x=>x.id===activeCard.cardId);
     c.color=this.value; saveState(); render(); renderCalendar();
   };
-
   document.getElementById('delete-card-btn').onclick=()=>{
     if(!activeCard) return;
     deleteCard(activeCard.listId,activeCard.cardId);
@@ -424,9 +428,9 @@
   document.getElementById('filter-input').onchange      = ()=>{render();renderCalendar();};
   document.getElementById('modal-close').onclick        = closeModal;
   document.getElementById('add-check-item-btn').onclick = addChecklistItem;
-  document.getElementById('check-item-input').addEventListener('keydown',
-    e=>{if(e.key==='Enter')addChecklistItem();}
-  );
+  document.getElementById('check-item-input').addEventListener('keydown',e=>{
+    if(e.key==='Enter') addChecklistItem();
+  });
 
   // Initialize
   loadState(); render(); renderCalendar();

@@ -1,6 +1,6 @@
-/* styles.css */
+/* tools/todo-app/styles.css */
 
-/* Global box-sizing & font */
+/* Global reset & font */
 *, *::before, *::after { box-sizing: border-box; }
 body {
   margin: 0; padding: 0;
@@ -30,7 +30,9 @@ body {
   display: flex; flex-direction: column;
 }
 .list-header {
-  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: grab;
+  margin-bottom: 8px;
 }
 .cards {
   flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;
@@ -58,7 +60,7 @@ body {
   height: 100%; position: relative;
   display: grid;
   grid-template-columns: 60px repeat(7,1fr);
-  /* rows set in JS */
+  /* rows set by JS */
 }
 .cell {
   border: 1px solid #ddd; position: relative; z-index: 1;
@@ -106,27 +108,7 @@ body {
   font-size: 24px; cursor: pointer;
 }
 
-/* Modal inputs */
-#segment-container,
-#color-container,
-#tags-container {
-  margin: 10px 0; display: flex; align-items: center; gap: 6px;
-}
-#segment-container input,
-#tags-container input {
-  width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;
-}
-#tags-container input { flex: 1; width: auto; }
-
-/* Delete card button */
-.drag-handle {
-  cursor: grab;
-  user-select: none;
-  padding: 0 4px;
-  margin-right: 4px;
-}
-
-/* 2) Tweaked delete‑card button—smaller, less “urgent” */
+/* Delete card button: smaller/subtle */
 .delete-card-btn {
   margin-top: 10px;
   padding: 4px 8px;
